@@ -1,7 +1,7 @@
 Prompt 2: Database Configuration and Models
 Building on our Node.js Express server, implement the database layer with the following:
 
-1. Create a database connection module in /db/index.js that connects to MongoDB using mongoose.
+1. Create a database connection module in /db/index.js that connects to Supabase.
 
 2. Implement the user model with:
    - Username (required, unique)
