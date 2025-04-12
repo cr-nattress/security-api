@@ -106,35 +106,143 @@ const findUserByUsername = async (username) => {
 };
 
 /**
- * Finds a user by their ID.
- * @param {string} id - The user's ID (usually UUID).
- * @returns {Promise<object|null>} The user object or null if not found.
+ * Finds a user by their unique ID.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<object|null>} The user object (excluding password) or null if not found.
  */
-const findUserById = async (id) => {
+const findUserById = async (userId) => {
   const supabase = getSupabaseClient();
   try {
     const { data, error } = await supabase
       .from(TABLE_NAME)
-      .select('id, username, email, role, created_at') // Exclude password hash
-      .eq('id', id)
-      .maybeSingle();
+      .select('id, username, email, role, created_at, updated_at') // Exclude password
+      .eq('id', userId)
+      .maybeSingle(); // Returns single object or null
 
     if (error) {
-      logger.error(`Supabase error finding user by ID (${id}): ${error.message}`);
-      throw new Error(`Database error finding user: ${error.message}`);
+      logger.error(`Supabase error finding user by ID ${userId}: ${error.message}`, { code: error.code });
+      throw new Error(`Database error finding user by ID: ${error.message}`);
     }
     return data;
   } catch (error) {
-    logger.error(`Error in findUserById service for ${id}:`, error);
+    logger.error(`Error in findUserById service for ID ${userId}:`, error);
     throw error;
   }
 };
 
+/**
+ * Retrieves all users from the database.
+ * @returns {Promise<Array<object>>} An array of user objects (excluding passwords).
+ */
+const getAllUsers = async () => {
+  const supabase = getSupabaseClient();
+  try {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('id, username, email, role, created_at, updated_at'); // Exclude password
+
+    if (error) {
+      logger.error(`Supabase error getting all users: ${error.message}`, { code: error.code });
+      throw new Error(`Database error getting all users: ${error.message}`);
+    }
+    return data || []; // Return data or empty array if null
+  } catch (error) {
+    logger.error('Error in getAllUsers service:', error);
+    throw error;
+  }
+};
+
+/**
+ * Updates a user's details by their ID.
+ * Does not handle password updates.
+ * @param {string} userId - The ID of the user to update.
+ * @param {object} updateData - An object containing the fields to update (e.g., { username, email, role }).
+ * @returns {Promise<object|null>} The updated user object (excluding password) or null if not found/error.
+ */
+const updateUserById = async (userId, updateData) => {
+  const supabase = getSupabaseClient();
+  const allowedUpdates = {};
+
+  // Filter out password or other non-updatable fields
+  if (updateData.username !== undefined) allowedUpdates.username = updateData.username;
+  if (updateData.email !== undefined) allowedUpdates.email = updateData.email;
+  if (updateData.role !== undefined) allowedUpdates.role = updateData.role; // Admins might update roles
+
+  // Ensure updated_at is handled by the trigger, no need to set it here
+
+  if (Object.keys(allowedUpdates).length === 0) {
+    logger.warn(`No valid fields provided for user update: ${userId}`);
+    return null; // Or throw an error? Returning the existing user might be better?
+    // Let's refetch the user to return current state if no updates applied
+    // return findUserById(userId);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .update(allowedUpdates)
+      .eq('id', userId)
+      .select('id, username, email, role, created_at, updated_at'); // Return updated user data (excluding password)
+
+    if (error) {
+      // Check for unique constraint violation (e.g., email/username already exists)
+      if (error.code === '23505') { // PostgreSQL unique violation code
+          logger.warn(`Update failed for user ${userId} due to unique constraint: ${error.details}`);
+          throw new Error(`Update failed: ${error.details}`); // More specific error
+      }
+      logger.error(`Supabase error updating user ${userId}: ${error.message}`, { code: error.code });
+      throw new Error(`Database error updating user: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+        logger.warn(`Attempted to update non-existent user: ${userId}`);
+        return null; // User not found
+    }
+
+    return data[0]; // Return the updated user
+  } catch (error) {
+    logger.error(`Error in updateUserById service for ID ${userId}:`, error);
+    throw error; // Re-throw original or new Error
+  }
+};
+
+/**
+ * Deletes a user by their ID.
+ * @param {string} userId - The ID of the user to delete.
+ * @returns {Promise<boolean>} True if deletion was successful, false otherwise.
+ */
+const deleteUserById = async (userId) => {
+  const supabase = getSupabaseClient();
+  try {
+    // Supabase delete doesn't typically return the count or data easily without specific select
+    // We check the error status
+    const { error } = await supabase
+      .from(TABLE_NAME)
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      logger.error(`Supabase error deleting user ${userId}: ${error.message}`, { code: error.code });
+      throw new Error(`Database error deleting user: ${error.message}`);
+    }
+
+    // Since Supabase delete doesn't throw an error if the row doesn't exist,
+    // we assume success if no error occurred. A prior check (e.g., findUserById)
+    // might be needed in the controller if strict confirmation of existence is required.
+    return true;
+
+  } catch (error) {
+    logger.error(`Error in deleteUserById service for ID ${userId}:`, error);
+    return false; // Return false on failure
+  }
+};
 
 module.exports = {
   createUser,
   findUserByEmail,
   findUserByUsername,
   findUserById,
-  // Add other user-related database functions here
+  getAllUsers,
+  updateUserById,
+  deleteUserById
 };

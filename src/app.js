@@ -8,6 +8,7 @@ const errorHandler = require('./middlewares/errorHandler');
 const swaggerSpec = require('./config/swagger'); 
 const cookieParser = require('cookie-parser'); 
 const authRoutes = require('./api/v1/routes/auth.routes'); 
+const userRoutes = require('./api/v1/routes/user.routes'); 
 const { authenticateToken } = require('./api/v1/middlewares/auth.middleware'); 
 
 const app = express();
@@ -39,6 +40,9 @@ app.use((req, res, next) => {
 
 // Mount V1 Auth routes
 app.use('/api/v1/auth', authRoutes);
+
+// Mount V1 User routes
+app.use('/api/v1/users', userRoutes);
 
 // --- Example Protected Route --- 
 app.get('/api/v1/protected', authenticateToken, (req, res) => {
@@ -81,7 +85,8 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 // Serve Swagger documentation
-if (config.env !== 'production') {
+// if (config.env !== 'production') {
+if (true) {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
         explorer: true, // Enables search bar
         // You can add custom options here, e.g., customCssUrl
