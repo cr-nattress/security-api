@@ -6,7 +6,9 @@ const config = require('./config/config');
 const logger = require('./utils/logger');
 const errorHandler = require('./middlewares/errorHandler');
 const swaggerSpec = require('./config/swagger'); 
-// const v1ApiRoutes = require('./api/v1/routes'); // Import routes once they exist
+const cookieParser = require('cookie-parser'); 
+const authRoutes = require('./api/v1/routes/auth.routes'); 
+const { authenticateToken } = require('./api/v1/middlewares/auth.middleware'); 
 
 const app = express();
 
@@ -18,6 +20,9 @@ app.use(express.json());
 
 // Parse urlencoded request body
 app.use(express.urlencoded({ extended: true }));
+
+// Parse cookies
+app.use(cookieParser()); 
 
 // Enable CORS - configure options as needed
 app.use(cors());
@@ -32,18 +37,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// v1 API routes - Uncomment when routes are defined
-// app.use('/api/v1', v1ApiRoutes);
+// Mount V1 Auth routes
+app.use('/api/v1/auth', authRoutes);
 
-// Serve Swagger documentation
-// Only serve docs in non-production environments by default for security
-if (config.env !== 'production') {
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-        explorer: true, // Enables search bar
-        // You can add custom options here, e.g., customCssUrl
-    }));
-    logger.info(`Swagger docs available at /api-docs`);
-}
+// --- Example Protected Route --- 
+app.get('/api/v1/protected', authenticateToken, (req, res) => {
+    // Access user info attached by the middleware
+    res.json({ message: `Welcome User ${req.user.id}! Your role is ${req.user.role}. This is protected content.` });
+});
 
 /**
  * @swagger
@@ -78,5 +79,14 @@ app.use((req, res, next) => {
 
 // Centralized error handler
 app.use(errorHandler);
+
+// Serve Swagger documentation
+if (config.env !== 'production') {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+        explorer: true, // Enables search bar
+        // You can add custom options here, e.g., customCssUrl
+    }));
+    logger.info(`Swagger docs available at /api-docs`);
+}
 
 module.exports = app;
