@@ -7,13 +7,9 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const config = {
   env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 3000,
-  mongoose: {
-    url: process.env.MONGODB_URI,
-    options: {
-      // Add Mongoose connection options if needed
-      // useNewUrlParser: true, // Deprecated but keep for reference
-      // useUnifiedTopology: true, // Deprecated but keep for reference
-    },
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    anonKey: process.env.SUPABASE_ANON_KEY,
   },
   jwt: {
     secret: process.env.JWT_SECRET,
@@ -28,10 +24,14 @@ if (!config.jwt.secret) {
   process.exit(1);
 }
 
-if (!config.mongoose.url) {
-    console.error('FATAL ERROR: MONGODB_URI is not defined.');
+if (!config.supabase.url) {
+    console.error('FATAL ERROR: SUPABASE_URL is not defined.');
     process.exit(1);
 }
 
+if (!config.supabase.anonKey) {
+    console.error('FATAL ERROR: SUPABASE_ANON_KEY is not defined.');
+    process.exit(1);
+}
 
 module.exports = config;

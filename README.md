@@ -1,13 +1,13 @@
 # Security API
 
-A Node.js Express application demonstrating security best practices including authentication, authorization, input validation, and secure configuration.
+A Node.js Express application demonstrating security best practices including authentication, authorization, input validation, and secure configuration, using Supabase as the backend.
 
 ## Features
 
 - Express framework
-- MongoDB with Mongoose ODM
+- Supabase for database and backend services
 - JWT-based Authentication
-- Password Hashing with bcrypt
+- Password Hashing with bcrypt (if implementing custom auth)
 - Input Validation with express-validator
 - Security Headers with Helmet
 - CORS configuration
@@ -18,7 +18,7 @@ A Node.js Express application demonstrating security best practices including au
 
 - Node.js (v18+ recommended)
 - npm or yarn
-- MongoDB instance (local or cloud)
+- A Supabase project (get URL and Anon Key from your Supabase project settings)
 
 ## Setup
 
@@ -40,7 +40,14 @@ A Node.js Express application demonstrating security best practices including au
       ```bash
       cp .env.example .env
       ```
-    - Update the variables in the `.env` file with your configuration (database connection string, JWT secret, port, etc.).
+    - Update the variables in the `.env` file:
+        - `SUPABASE_URL`: Your Supabase project URL.
+        - `SUPABASE_ANON_KEY`: Your Supabase project Anon key.
+        - `JWT_SECRET`: A strong, random secret for signing JWTs (generate one, don't use the example value).
+        - `PORT`: The port the server should listen on (default is 3000).
+        - `NODE_ENV`: Set to `development` or `production`.
+        - `LOG_LEVEL`: Logging level (e.g., `info`, `debug`).
+        - `JWT_EXPIRES_IN`: Token expiration time (e.g., `1h`, `7d`).
 
 4.  **Start the server:**
     ```bash
@@ -60,12 +67,12 @@ A Node.js Express application demonstrating security best practices including au
     /v1
       /routes         # API routes (e.g., auth.routes.js, user.routes.js)
       /controllers    # Request handlers
-      /services       # Business logic
+      /services       # Business logic (interacts with Supabase)
       /middlewares    # Custom middleware (e.g., authentication, validation)
-  /config           # Configuration files (e.g., database, environment)
-  /models           # Mongoose models
+  /config           # Configuration files (e.g., environment loader)
+  /models           # Placeholder for potential data access layer functions (using Supabase client)
   /utils            # Utility functions (e.g., logger, response handlers)
-  /db               # Database connection setup
+  /db               # Supabase client initialization
   app.js            # Express application setup (middleware, routes)
   server.js         # Server initialization (HTTP server start)
 .env              # Environment variables (ignored by git)
